@@ -1,0 +1,5 @@
+-r services/api/requirements.txt
+-r pipelines/steps/preprocess/requirements.txt
+-r pipelines/steps/ml_infer/requirements.txt
+-r pipelines/steps/db_update/requirements.txt
+pytest>=8,<9
