@@ -38,7 +38,7 @@ Follow the [local-development guide](docs/local-development.md) for the supplied
 
 Choose only what interests you after the required work. Completing every extension is not expected.
 
-- [Add Argo orchestration](tasks/argo-orchestration/README.md)
+- [Add orchestration management layer (Argo/ Airflow etc.)](tasks/argo-orchestration/README.md)
 - [Implement a portable training and promotion platform](tasks/training-platform/README.md)
 - [Add portable object storage and model caching](tasks/portable-storage-models/README.md)
 - [Isolate shared development environments](tasks/dev-isolation/README.md)
