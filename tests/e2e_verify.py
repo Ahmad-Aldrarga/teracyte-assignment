@@ -129,6 +129,23 @@ def main():
     # Create a unique experiment ID
     experiment_id = f"e2e-{uuid.uuid4().hex}"
 
+    # Ensure fixtures exist before verification and timing.
+    data_dir = ROOT / "data"
+    required_files = [
+        data_dir / "manifest.json",
+        data_dir / "model" / "model.weights",
+        *[
+            data_dir / "objects" / "raw" / f"image-{i:03d}.png"
+            for i in range(1, 6)
+        ],
+    ]
+    if not all(file.is_file() for file in required_files):
+        subprocess.run(
+            ["python", "-m", "scripts.generate_mock_data", "--root", "data"],
+            cwd=ROOT,
+            check=True,
+        )
+
     # Calculate expected model checksum before running the analysis
     model_path = ROOT / "data" / "model" / "model.weights"
 

@@ -39,7 +39,17 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
-          tags: teracyte-app:${{ github.sha }}
+          load: true
+          tags: |
+            teracyte-app:local
+            teracyte-app:${{ github.sha }}
+
+      - name: Run end-to-end verification
+        run: python tests/e2e_verify.py
+
+      - name: Clean up E2E containers
+        if: always()
+        run: docker compose down -v --remove-orphans
 
   terraform-validate:
     name: Terraform Validation
