@@ -125,3 +125,97 @@ File: tests/e2e_verify.py
 
 Each run creates a unique experiment ID to prevent existing
 database records from producing a false positive.
+
+## Task 3 - Model Lifecycle and CI
+
+### Training and Evaluation
+
+Command:
+
+    python -m examples.model_lifecycle.train --output-dir data/model-lifecycle
+
+Observed results:
+- Training rows: 128
+- Test rows: 64
+- Baseline MSE: 2.6468672472
+- Model MSE: 0.000111415
+- Quality threshold: MSE < 0.001
+- Result: PASS
+
+### Model Publication
+
+Command:
+
+    python -m scripts.publish_model \
+      --model-path data/model-lifecycle/model.json \
+      --version v1
+
+Published files:
+- data/models/v1/model.json
+- data/models/v1/metadata.json
+
+Model SHA-256:
+40bfe02753cb2b202f626f9d672dc49be7f780d7b17542cb9b8986604d48b10f
+
+### Rejection Tests
+
+Manually verified:
+- Invalid version rejected (exit code 1)
+- Missing model rejected without publication
+- Corrupt JSON rejected without publication
+- High-MSE model rejected without publication
+- Existing v1 cannot be overwritten
+- Tampered model rejected due to SHA-256 mismatch
+
+### Model Handoff
+
+Configuration:
+    config/selected_model.json
+
+Selected version: v1
+
+The Analysis runner successfully loaded the selected artifact
+and validated its SHA-256 before processing five images.
+
+Experiment: model-v1-test-2
+Status: COMPLETED
+PostgreSQL: 5 rows with the expected v1 SHA-256
+
+The image inference remains a deterministic mock; the linear
+regression model is used as a versioned artifact dependency.
+
+### Dev CI - GitHub Actions
+
+Workflow: .github/workflows/dev-ci.yml
+Run ID: 40109981821
+Result: SUCCESS
+
+Checks:
+- Python application tests
+- Docker image build
+
+### ML CI - GitHub Actions
+
+Workflow: .github/workflows/ml-ci.yml
+Run ID: 40112354181
+Result: SUCCESS
+
+Checks:
+- ML unit tests
+- Training and evaluation
+- Model publication
+- SHA-256 verification
+- Artifact upload
+
+Artifact: validated-model-v1
+
+The artifact was downloaded from GitHub Actions and independently
+verified against its published metadata.
+
+### Reproducibility
+
+The data/ directory is gitignored. Model artifacts are regenerated
+during ML CI and are not required to be committed to Git.
+
+Publishing a new model does not automatically change the
+selected model configuration.
