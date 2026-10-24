@@ -1,55 +1,241 @@
-# DevOps & MLOps Engineer — Take-Home Assignment
+# TeraCyte – DevOps & MLOps Take-Home Assignment
 
-You have **48 hours to submit**.
+This repository contains my implementation of the five required
+DevOps/MLOps assignment tasks.
 
-Start with a clean, working baseline. If a requirement is beyond your experience, implement a simplified version and explain the missing production work.
+The solution focuses on reproducibility, automated verification,
+secure model handoff, cost optimization, and infrastructure validation.
 
-## The system
+## 1. Implemented Features
 
-Camera images pass through preprocessing, mock model inference and database aggregation. MongoDB tracks experiments; PostgreSQL stores results. Dev owns the API, Celery and production analysis steps. Data/ML develops models through notebooks, training and benchmarking. DevOps/MLOps provides the infrastructure and model handoff between them. We run on Azure today and need cost-conscious, portable infrastructure.
+| Task | Implementation |
+|---|---|
+| 1. Containerization | Docker Compose with API, Celery, Analysis, PostgreSQL, MongoDB and Redis |
+| 2. E2E Verification | Five-image experiment verification, databases, model SHA-256 and execution time |
+| 3. Model Lifecycle | Training, evaluation, versioned publication, selection and CI |
+| 4. Cloud Architecture | Azure architecture, cost optimization and portability |
+| 5. Terraform | Azure Blob Storage, private containers, lifecycle policies and CI validation |
 
-## Start here
+## 2. System Architecture
 
-Follow the [local-development guide](docs/local-development.md) for the supplied services and [CPU training example](examples/model_lifecycle/README.md). Containerization, verification, CI, Terraform storage configuration and a small model handoff are your implementation tasks. The sequential analysis runner and local artifact publication are acceptable.
+The system processes images through a sequential analysis pipeline:
 
-## Required tasks
+    Camera Images
+          |
+          v
+     Preprocessing
+          |
+          v
+     Mock Inference
+     + Model SHA-256
+          |
+          v
+    PostgreSQL Results
+    MongoDB Experiment Status
 
-### [Containerize the workloads](tasks/containerize-workloads/README.md)
-- Run the API, worker and analysis pipeline with Compose.
-- Configure connections externally; keep data and models outside images.
+FastAPI exposes application endpoints.
 
-### [Verify an experiment](tasks/verify-experiment/README.md)
-- Check five results, experiment status, model digest and execution time.
-- Demonstrate one failing check.
+Celery and Redis support background report tasks.
 
-### [Support notebook-to-model delivery and Dev](tasks/support-teams/README.md)
-- Design portable cloud training and demonstrate a small local model handoff.
-- Separate Dev's application/analysis delivery from Data/ML's model lifecycle.
+Data/ML trains and evaluates models separately from application
+delivery. Validated artifacts are selected through configuration
+and verified before Analysis consumes them.
 
-### [Plan a cost-conscious cloud deployment](tasks/cloud-deployment/README.md)
-- Map serving, analysis, notebook users and training to cloud infrastructure.
-- Compare costs using the supplied worksheet and explain portability.
+## 3. Prerequisites
 
-### [Implement storage with Terraform](tasks/cloud-infrastructure/README.md)
-- Define private object storage and retention policies for your chosen cloud.
-- Validate the configuration locally and in CI; cloud deployment is optional.
+- Python 3.11+
+- Docker and Docker Compose
+- Terraform (for infrastructure validation)
+- Git
 
-## Optional extensions
+No Azure subscription is required for local testing.
 
-Choose only what interests you after the required work. Completing every extension is not expected.
+## 4. Quick Start
 
-- [Add orchestration management layer (Argo/ Airflow etc.)](tasks/argo-orchestration/README.md)
-- [Implement a portable training and promotion platform](tasks/training-platform/README.md)
-- [Add portable object storage and model caching](tasks/portable-storage-models/README.md)
-- [Isolate shared development environments](tasks/dev-isolation/README.md)
-- [Demonstrate failure recovery](tasks/failure-recovery/README.md)
+All commands run from the repository root.
 
-## AI use and submission
+### Install Python dependencies
 
-**You are encouraged to use AI assistants. However, unverified, generic AI output will fail the review.**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-local.txt
+```
 
-Submit your repository with:
-- **EVIDENCE.md:** exact run commands, relevant outputs, one failed verification and any setup limits.
-- **ARCHITECTURE_AND_DECISIONS.md:** a short paragraph per major choice explaining why, one alternative and the trade-off. Include the cloud task's diagram/table and calculations here; no separate architecture essay is needed.
+### Build the Docker image
 
-Explain one issue you encountered and how you verified the fix. Label estimates and incomplete work honestly. Keep generated data, model weights and credentials out of Git. We will discuss your working system, how it supports both teams, and the reasoning behind your cloud choices.
+```bash
+docker build -t teracyte-app:local .
+```
+
+### Start the services
+
+```bash
+docker compose up -d --wait
+```
+
+### Run E2E verification
+
+```bash
+python tests/e2e_verify.py
+```
+
+The E2E test:
+- Uses a unique experiment ID.
+- Processes exactly five images.
+- Verifies five PostgreSQL records.
+- Verifies MongoDB COMPLETED status.
+- Validates the model SHA-256 independently.
+- Requires Analysis to finish within 180 seconds.
+- Returns a nonzero exit code on verification failure.
+
+### Run unit tests
+
+```bash
+python -m pytest -q tests/test_starter.py tests/test_aggregation.py tests/test_model_lifecycle.py
+```
+
+### Stop the services
+
+```bash
+docker compose down
+```
+
+## 5. Model Lifecycle
+
+The model workflow is:
+
+    Train
+      |
+      v
+    Evaluate / Quality Gate
+      |
+      v
+    Publish Versioned Artifact
+      |
+      v
+    Select Model Version
+      |
+      v
+    Validate Format and SHA-256
+      |
+      v
+    Analysis Consumer
+
+### Train a model
+
+```bash
+python -m examples.model_lifecycle.train --output-dir data/model-lifecycle
+```
+
+This creates:
+- data/model-lifecycle/model.json
+- data/model-lifecycle/evaluation.json
+
+### Publish version v1
+
+```bash
+python -m scripts.publish_model --model-path data/model-lifecycle/model.json --version v1
+```
+
+Publication rejects:
+- Invalid model formats.
+- Models that fail the MSE quality threshold.
+- Existing model versions that would be overwritten.
+
+### Verify the selected model
+
+```bash
+python -m scripts.model_handoff
+```
+
+Model selection is configured in:
+
+    config/selected_model.json
+
+### Run Analysis with the selected model
+
+```bash
+docker compose run --rm -e MODEL_SELECTION_CONFIG=/app/config/selected_model.json analysis python -m scripts.run_local --experiment-id model-v1-demo
+```
+
+The pipeline records the selected model artifact SHA-256.
+
+Important: image inference is a deterministic mock.
+The toy linear regression model is validated independently,
+not used to generate real image predictions.
+
+## 6. Continuous Integration
+
+Two separate GitHub Actions workflows are implemented.
+
+### Core Dev CI
+
+File: `.github/workflows/ci-core-dev.yml`
+
+Checks:
+- Python application tests.
+- Docker image build.
+- Full E2E verification.
+- Terraform formatting and validation.
+
+### Data ML CI
+
+File: `.github/workflows/ci-data-ml.yml`
+
+Checks:
+- ML unit tests.
+- Model consumer compatibility.
+- Model training and evaluation.
+- Versioned publication and quality gate.
+- Selected model and SHA-256 verification.
+- Model artifact upload.
+
+Shared application/model code changes trigger both workflows.
+
+No cloud infrastructure is deployed by CI.
+
+## 7. Terraform Infrastructure
+
+Terraform configuration is located under `infra/`.
+
+The design includes:
+- Azure Storage Account using Standard LRS.
+- Private containers for raw images, masks and models.
+- Raw images moved to Cool after 7 days.
+- Raw images and masks deleted after 30 days.
+- Models excluded from automatic lifecycle deletion.
+- HTTPS, TLS 1.2 and Microsoft Entra ID authentication.
+
+Validate without deploying:
+
+```bash
+terraform fmt -check -recursive infra/
+terraform -chdir=infra init -backend=false
+terraform -chdir=infra validate
+```
+
+See [Terraform documentation](infra/README.md).
+
+## 8. Documentation
+
+- [Architecture and cost decisions](ARCHITECTURE_AND_DECISIONS.md)
+- [Verification evidence](EVIDENCE.md)
+- [Local development guide](docs/local-development.md)
+- [Model lifecycle example](examples/model_lifecycle/README.md)
+
+The original assignment requirements are preserved under `tasks/`.
+
+## 9. Security and Limitations
+
+- Generated data and model artifacts are excluded from Git.
+- Terraform state files and credentials are not committed.
+- Docker Compose uses development credentials only.
+- Local storage uses bind mounts rather than cloud object storage.
+- Analysis is sequential and uses mock image inference.
+- Terraform is validated but not applied to Azure.
+- Cloud costs are estimates based on assignment assumptions.
+
+Production improvements would include authentication,
+workload identity, private networking, managed databases,
+distributed orchestration, observability and failure recovery.

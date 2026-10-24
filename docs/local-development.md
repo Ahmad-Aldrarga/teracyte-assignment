@@ -4,7 +4,7 @@
 
 ## What is supplied
 
-The starter contains working Python steps and a sequential runner. Compose currently starts PostgreSQL, MongoDB and Redis; adding application containers is a required task.
+The starter contains working Python steps and a sequential runner. Docker Compose now supports PostgreSQL, MongoDB, Redis, FastAPI, Celery and the containerized Analysis runner.
 
 | Location | Purpose |
 |---|---|
@@ -89,13 +89,13 @@ The [supplied notebook and equivalent CLI](../examples/model_lifecycle/README.md
 python -m examples.model_lifecycle.train --output-dir data/model-lifecycle
 ~~~
 
-This produces model.json and evaluation.json. The helpers supply training, benchmarking against a baseline, loading and prediction. Publication, release metadata, selection and rejection remain candidate work. Jupyter is optional; the CLI uses the same helpers as the notebook.
+This produces model.json and evaluation.json. The helpers supply training, benchmarking against a baseline, loading and prediction. Model publication, versioned metadata, quality rejection and model selection are implemented in scripts/publish_model.py and scripts/model_handoff.py. Jupyter is optional; the CLI uses the same helpers as the notebook.
 
 The image-inference mock can read this artifact and report its SHA-256, but its mask metrics do not evaluate the regression weights. Use the supplied model evaluation separately; do not claim production accuracy from the pipeline's completion status.
 
 ## Known limitations
 
-The API and worker use fixed local storage paths. Local shared volumes are sufficient for the core assignment. The optional storage task replaces these paths with object access.
+The API and worker use fixed local storage paths. Local shared volumes are sufficient for the core assignment. Terraform defines Azure Blob Storage infrastructure, but the local application still uses bind-mounted storage.
 
 Preprocessing has a marked memory bottleneck. Optimizing it or measuring and sizing its container is optional. Model reads happen on every inference invocation; caching is optional.
 

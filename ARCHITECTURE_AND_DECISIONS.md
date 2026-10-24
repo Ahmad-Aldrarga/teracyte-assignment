@@ -264,3 +264,121 @@ Measure real usage before adding more infrastructure.
 The cheapest architecture is not necessarily the one with
 the lowest VM price if failures, retries and operational
 overhead increase total costs.
+
+## 9. Model Lifecycle: Notebook to Production Analysis
+
+### End-to-End Workflow
+
+    Data/ML Notebook
+           |
+           v
+    Versioned Dataset
+           |
+           v
+    Training Job (CPU / GPU if needed)
+           |
+           v
+    Model Evaluation + Quality Gate
+           |
+           v
+    Immutable Versioned Model Artifact
+           |
+           v
+    Model Selection Configuration
+           |
+           v
+    Format + SHA-256 Verification
+           |
+           v
+    Production Analysis Consumer
+
+### Development and Training
+
+Data/ML develops and experiments using notebooks.
+
+The current assignment uses a deterministic CPU-based linear
+regression example with a synthetic dataset.
+
+For production, training jobs would run on Kubernetes:
+- CPU node pools for lightweight workloads.
+- Dedicated GPU node pools when acceleration is required.
+- Spot instances for restartable training jobs.
+- Durable checkpoints for interruption recovery.
+
+Datasets, checkpoints and model artifacts should be stored
+outside compute instances, for example in Azure Blob Storage.
+
+### Validation and Publication
+
+Training generates model.json and evaluation.json.
+
+The publication process:
+1. Validates the model format.
+2. Evaluates the model against held-out data.
+3. Rejects models that fail the MSE quality threshold.
+4. Computes the model SHA-256.
+5. Publishes an immutable version and metadata.
+
+A failed validation must not replace the selected production model.
+
+The current implementation publishes artifacts locally under
+data/models/. Cloud object storage is a production design option.
+
+### Model Selection and Consumption
+
+The selected version is defined in config/selected_model.json.
+
+The Analysis runner:
+1. Reads the selected version.
+2. Loads the published model and metadata.
+3. Validates the model format and publication status.
+4. Verifies the SHA-256 checksum.
+5. Passes the verified artifact to the Analysis consumer.
+
+The current image inference is a deterministic mock that records
+the selected artifact SHA-256 rather than producing real ML
+predictions from the toy regression model.
+
+### Security
+
+Production training and serving identities should use managed
+workload identity with least-privilege storage access.
+
+Training requires write access to candidate artifacts.
+Analysis requires read access to approved model artifacts.
+
+Credentials must not be embedded in notebooks, containers,
+model metadata or Git.
+
+### Cost Optimization and Cleanup
+
+- Use CPU training unless GPU acceleration is justified.
+- Allocate GPU resources only while jobs are running.
+- Scale idle GPU node pools toward zero.
+- Stop idle notebooks automatically.
+- Cache verified model artifacts near Analysis workers.
+- Reuse cached artifacts when their SHA-256 matches.
+- Delete temporary training resources after completion.
+- Retain approved model versions for rollback.
+
+### Rollback
+
+Model publication does not automatically update the selected
+production version.
+
+If a newly selected model fails validation, keep the previous
+approved model selected.
+
+A rollback changes the selected version configuration to a
+previously validated artifact, followed by SHA-256 verification
+and consumer compatibility checks.
+
+### CI Ownership
+
+Core Dev CI validates application code, Docker, E2E and Terraform.
+
+Data ML CI validates training, publication, model integrity
+and consumer compatibility.
+
+Changes to shared Analysis or model handoff code trigger both
+CI workflows.

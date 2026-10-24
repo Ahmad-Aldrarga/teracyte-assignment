@@ -270,3 +270,82 @@ No Azure resources were created.
 - No credentials are stored in the repository.
 - Production deployment requires Azure RBAC and
   appropriate network restrictions.
+
+## Troubleshooting: E2E Reproducibility in a Clean CI Environment
+
+### Problem
+
+During the final code review, I identified a hidden dependency
+in the E2E verification script.
+
+The verifier calculated the expected model SHA-256 from a file
+under data/ before ensuring that the required fixtures existed.
+
+This worked locally because the files had already been generated.
+However, data/ is excluded from Git, so a fresh checkout does
+not contain these artifacts.
+
+This created a reproducibility risk: a verification process
+could depend on the developer's local environment.
+
+### Root Cause
+
+The E2E script assumed that generated test data and model
+artifacts already existed before verification started.
+
+Fixture preparation was not guaranteed to happen before
+the independent SHA-256 calculation.
+
+### Resolution
+
+I updated tests/e2e_verify.py to:
+
+1. Check whether the manifest, model artifact and five input
+   images exist.
+2. Generate deterministic mock fixtures when files are missing.
+3. Complete fixture preparation before calculating SHA-256.
+4. Preserve the original database and integrity checks.
+
+I also added the E2E verifier to Core Dev CI.
+
+The GitHub workflow builds and loads the Docker image, runs
+the verification against containerized dependencies, and
+cleans up the environment afterward.
+
+### Verification
+
+Local E2E verification:
+- Five images processed successfully.
+- PostgreSQL verification: PASS.
+- MongoDB completion verification: PASS.
+- Model SHA-256 verification: PASS.
+- Analysis duration: 8.30 seconds.
+
+GitHub Actions:
+- Workflow: Core Dev CI
+- Run ID: 40120335570
+- Result: SUCCESS
+- E2E verification: PASS
+
+The clean GitHub runner confirmed that the updated workflow
+could complete without relying on previously generated local
+artifacts.
+
+### Lessons Learned
+
+A test that passes on a developer machine is not necessarily
+reproducible in a clean environment.
+
+Integration tests should prepare their own dependencies and
+fixtures, use deterministic inputs, and verify actual outputs.
+
+Running E2E verification in CI helps identify hidden
+environment dependencies before delivery.
+
+### Scope of the Finding
+
+The issue was identified during code review, not through
+an observed failed production deployment or failed CI run.
+
+The fix was verified locally and through a successful
+GitHub Actions execution.
