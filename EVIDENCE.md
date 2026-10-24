@@ -219,3 +219,54 @@ during ML CI and are not required to be committed to Git.
 
 Publishing a new model does not automatically change the
 selected model configuration.
+
+## Task 5 - Terraform Infrastructure
+
+### Infrastructure
+
+Terraform defines:
+- Azure Resource Group
+- Standard LRS Storage Account
+- Private containers: raw-images, masks, models
+- Raw images: Cool after 7 days, delete after 30 days
+- Masks: delete after 30 days
+- Models: excluded from automatic deletion
+- HTTPS, TLS 1.2 and Microsoft Entra ID authentication
+
+### Local Verification
+
+Terraform version: 1.17.0
+AzureRM Provider: 4.81.0
+
+Commands:
+    terraform fmt -check -recursive infra/
+    terraform -chdir=infra init -backend=false
+    terraform -chdir=infra validate
+
+Result: PASS
+
+### GitHub Actions Verification
+
+Workflow: .github/workflows/dev-ci.yml
+Run ID: 40118953447
+Result: SUCCESS
+
+Jobs:
+- test-and-build: PASS
+- Terraform Validation: PASS
+
+Terraform CI checks:
+- Formatting: PASS
+- Initialization: PASS
+- Validation: PASS
+
+No terraform apply was executed.
+No Azure resources were created.
+
+### Security and Reproducibility
+
+- Terraform state files are excluded from Git.
+- Provider lock file is committed.
+- No credentials are stored in the repository.
+- Production deployment requires Azure RBAC and
+  appropriate network restrictions.
