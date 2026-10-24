@@ -3,20 +3,32 @@ name: ML CI
 on:
   push:
     paths:
+      - ".dockerignore"
+      - ".github/workflows/ci-data-ml.yml"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "config/**"
       - "examples/model_lifecycle/**"
-      - "scripts/publish_model.py"
+      - "pipelines/**"
+      - "requirements-local.txt"
       - "scripts/model_handoff.py"
-      - "config/selected_model.json"
+      - "scripts/publish_model.py"
+      - "scripts/run_local.py"
       - "tests/test_model_lifecycle.py"
-      - ".github/workflows/ml-ci.yml"
   pull_request:
     paths:
+      - ".dockerignore"
+      - ".github/workflows/ci-data-ml.yml"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "config/**"
       - "examples/model_lifecycle/**"
-      - "scripts/publish_model.py"
+      - "pipelines/**"
+      - "requirements-local.txt"
       - "scripts/model_handoff.py"
-      - "config/selected_model.json"
+      - "scripts/publish_model.py"
+      - "scripts/run_local.py"
       - "tests/test_model_lifecycle.py"
-      - ".github/workflows/ml-ci.yml"
   workflow_dispatch:
 
 permissions:

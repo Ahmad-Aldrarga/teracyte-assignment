@@ -2,7 +2,39 @@ name: Dev CI
 
 on:
   push:
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/ci-core-dev.yml"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "config/**"
+      - "infra/**"
+      - "pipelines/**"
+      - "requirements-local.txt"
+      - "scripts/generate_mock_data.py"
+      - "scripts/model_handoff.py"
+      - "scripts/run_local.py"
+      - "services/**"
+      - "tests/e2e_verify.py"
+      - "tests/test_aggregation.py"
+      - "tests/test_starter.py"
   pull_request:
+    paths:
+      - ".dockerignore"
+      - ".github/workflows/ci-core-dev.yml"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "config/**"
+      - "infra/**"
+      - "pipelines/**"
+      - "requirements-local.txt"
+      - "scripts/generate_mock_data.py"
+      - "scripts/model_handoff.py"
+      - "scripts/run_local.py"
+      - "services/**"
+      - "tests/e2e_verify.py"
+      - "tests/test_aggregation.py"
+      - "tests/test_starter.py"
   workflow_dispatch:
 
 permissions:
