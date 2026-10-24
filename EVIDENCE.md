@@ -73,3 +73,55 @@ Actual result:
 - Result: PASS
 
 The test demonstrates that the Analysis runner reports a dependency failure rather than silently succeeding.
+
+## Task 2 - End-to-End Verification
+
+### Purpose
+
+Verify that a fresh analysis experiment produces the expected
+records in PostgreSQL and MongoDB, uses the expected model artifact,
+and completes within the configured time limit.
+
+### Positive Test
+
+Command:
+
+    python tests/e2e_verify.py
+    echo "E2E exit code: $?"
+
+Observed results:
+- Unique experiment ID generated
+- PostgreSQL: exactly 5 image records with expected IDs
+- MongoDB: status COMPLETED, result_count 5
+- Model SHA-256: independently calculated before analysis and verified
+- Analysis duration: 7.87 seconds
+- Exit code: 0
+- Result: PASS
+
+### Negative Test - Incorrect Model SHA-256
+
+Command:
+
+    E2E_EXPECTED_SHA256=0000000000000000000000000000000000000000000000000000000000000000 python tests/e2e_verify.py
+    echo "E2E exit code: $?"
+
+Observed results:
+- PostgreSQL verification: PASS
+- MongoDB verification: PASS
+- SHA-256 mismatch detected for image-001
+- Exit code: 1
+- Result: PASS (expected verification failure)
+
+### Timeout Handling
+
+- Configured analysis timeout: 180 seconds
+- Python subprocess timeout triggers container cleanup and failure
+- Timeout failure path has not been exercised separately
+- Database startup occurs before the analysis timer starts
+
+### Implementation
+
+File: tests/e2e_verify.py
+
+Each run creates a unique experiment ID to prevent existing
+database records from producing a false positive.
