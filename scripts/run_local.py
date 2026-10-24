@@ -7,11 +7,10 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-
 from pymongo import MongoClient
 
 from scripts.generate_mock_data import generate_data
-
+from scripts.model_handoff import resolve_selected_model
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -25,6 +24,19 @@ def main() -> None:
     if not manifest_path.exists():
         generate_data(data_dir)
     manifest = json.loads(manifest_path.read_text())
+    # Use the original model unless a selected model is configured.
+    model_path = manifest["model_path"]
+
+    selected_config = os.getenv("MODEL_SELECTION_CONFIG")
+
+    if selected_config:
+        model_path, model_sha = resolve_selected_model(
+            Path(selected_config),
+            data_dir / "models",
+        )
+
+        print(f"Selected model: {model_path}")
+        print(f"Verified model SHA-256: {model_sha}")
     mongo_url = os.getenv("MONGO_URL", "mongodb://localhost:27018")
     with MongoClient(mongo_url) as mongo:
         mongo["experiments"]["experiments"].update_one(
@@ -47,7 +59,7 @@ def main() -> None:
         subprocess.run([
             sys.executable, "-m", "pipelines.steps.ml_infer.run", "--experiment-id", args.experiment_id,
             "--image-id", image_id, "--image-path", str(image_path),
-            "--preprocess", str(preprocess), "--model-path", manifest["model_path"],
+            "--preprocess", str(preprocess), "--model-path", str(model_path),
             "--output", str(image_work / "inference.json"),
         ], cwd=ROOT, check=True)
     subprocess.run([

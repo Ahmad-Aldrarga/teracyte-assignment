@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements-local.txt
 
 COPY services/ services/
 COPY pipelines/ pipelines/
+COPY examples/ examples/
 COPY scripts/ scripts/
 
 CMD ["python", "-m", "scripts.run_local"]
